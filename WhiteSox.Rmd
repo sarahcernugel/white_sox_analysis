@@ -1,0 +1,708 @@
+---
+title: "White Sox Analysis"
+author: "Sarah Cernugel"
+date: "2024-11-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message = FALSE}
+## Packages
+library(ggrepel)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(ggdark)
+library(baseballr)
+library(tidyr)
+library(ggnewscale)
+library(cluster)
+library(factoextra)
+library(dendextend)
+library(ggimage)
+library(gganimate)
+```
+
+## Batter Data
+```{r}
+load("~/Downloads/2024_stat_cast_data.rda")
+batters <- batters[,colSums(is.na(batters))<nrow(batters)]
+
+write.csv(batters, "batters.csv")
+
+#Select only the players who will return for the 2025 season
+white_sox <- filter(batters, player_name == "DeLoach, Zach" | player_name == "Robert Jr., Luis" | player_name == "Vargas, Miguel" | player_name == "Amaya, Jacob" | player_name == "Fletcher, Dominic" | player_name == "Lee, Korey" | player_name == "Ramos, Bryan" | player_name == "Sosa, Lenyn" | player_name == "Vaughn, Andrew" | player_name == "Benintendi, Andrew" | player_name == "Robinson, Chuckie" | player_name == "Sheets, Gavin" | player_name == "Julks, Corey" | player_name == "Baldwin, Brooks" | player_name == "Colás, Oscar" | player_name == "Shewmake, Braden")
+```
+
+## Team Data
+```{r}
+statcast <- read_csv("/Users/sarahcernugel/Statcast_Hitting.csv")
+
+savant_data <- read_csv("/Users/sarahcernugel/Downloads/savant_data.csv")
+sox_savant_data <- filter(savant_data, player_name == "DeLoach, Zach" | player_name == "Robert Jr., Luis" | player_name == "Vargas, Miguel" | player_name == "Amaya, Jacob" | player_name == "Fletcher, Dominic" | player_name == "Lee, Korey" | player_name == "Ramos, Bryan" | player_name == "Sosa, Lenyn" | player_name == "Vaughn, Andrew" | player_name == "Benintendi, Andrew" | player_name == "Robinson, Chuckie" | player_name == "Sheets, Gavin" | player_name == "Julks, Corey" | player_name == "Baldwin, Brooks" | player_name == "Colás, Oscar" | player_name == "Shewmake, Braden")
+```
+
+## Player Data
+```{r}
+#Vaughn
+vaughn <- filter(white_sox, player_name == "Vaughn, Andrew")
+vaughn_swings <- filter(vaughn, bat_speed != "NA")
+vaughn_hits <- filter(vaughn_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+vaughn_swing_strike <- filter(vaughn, description == "swinging_strike")
+
+#Benintendi
+benintendi <- filter(white_sox, player_name == "Benintendi, Andrew")
+benintendi_swings <- filter(benintendi, bat_speed != "NA")
+benintendi_hits <- filter(benintendi_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Sheets
+sheets <- filter(white_sox, player_name == "Sheets, Gavin")
+sheets_swings <- filter(sheets, bat_speed != "NA")
+sheets_hits <- filter(sheets_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Lee
+lee <- filter(white_sox, player_name == "Lee, Korey")
+lee_swings <- filter(lee, bat_speed != "NA")
+lee_hits <- filter(lee_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Robert
+robert <- filter(white_sox, player_name == "Robert Jr., Luis")
+robert_swings <- filter(robert, bat_speed != "NA")
+robert_hits <- filter(robert_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#DeLoach
+deloach <- filter(white_sox, player_name == "DeLoach, Zach")
+deloach_swings <- filter(deloach, bat_speed != "NA")
+deloach_hits <- filter(deloach_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Vargas
+vargas <- filter(white_sox, player_name == "Vargas, Miguel")
+vargas_swings <- filter(vargas, bat_speed != "NA")
+vargas_hits <- filter(vargas_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Sosa
+sosa <- filter(white_sox, player_name == "Sosa, Lenyn")
+sosa_swings <- filter(sosa, bat_speed != "NA")
+sosa_hits <- filter(sosa_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Baldwin
+baldwin <- filter(white_sox, player_name == "Baldwin, Brooks")
+baldwin_swings <- filter(baldwin, bat_speed != "NA")
+baldwin_hits <- filter(baldwin_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Fletcher
+fletcher <- filter(white_sox, player_name == "Fletcher, Dominic")
+fletcher_swings <- filter(fletcher, bat_speed != "NA")
+fletcher_hits <- filter(fletcher_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Julks
+julks <- filter(white_sox, player_name == "Julks, Corey")
+julks_swings <- filter(julks, bat_speed != "NA")
+julks_hits <- filter(julks_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Amaya
+amaya <- filter(white_sox, player_name == "Amaya, Jacob")
+amaya_swings <- filter(amaya, bat_speed != "NA")
+amaya_hits <- filter(amaya_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Robinson
+robinson <- filter(white_sox, player_name == "Robinson, Chuckie")
+robinson_swings <- filter(robinson, bat_speed != "NA")
+robinson_hits <- filter(robinson_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Shewmake
+shewmake <- filter(white_sox, player_name == "Shewmake, Braden")
+shewmake_swings <- filter(shewmake, bat_speed != "NA")
+shewmake_hits <- filter(shewmake_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Ramos
+ramos <- filter(white_sox, player_name == "Ramos, Bryan")
+ramos_swings <- filter(ramos, bat_speed != "NA")
+ramos_hits <- filter(ramos_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+
+#Colas
+colas <- filter(white_sox, player_name == "Colás, Oscar")
+colas_swings <- filter(colas, bat_speed != "NA")
+colas_hits <- filter(colas_swings, events == "home_run" | events == "single" | events == "double" | events == "triple")
+```
+
+## Team Statistical Heat Map
+```{r, warning = FALSE}
+statcast <- statcast %>% filter(Team != "MLB")
+heatmap_columns <- c("H", "HR", "BB", "SO", "BA", "OBP", "SLG", "WOBA",
+                     "Barrel %", "Hard Hit %", "Exit Velocity")
+
+heatmap_data <- statcast[,heatmap_columns]
+rownames(heatmap_data) <- paste(statcast$Team)
+
+heatmap_data2 <- as.matrix(heatmap_data)
+
+#coul <- colorRampPalette(brewer.pal(5, "RdBu"))(30)
+#heatmap(heatmap_data2, scale="column",  col = coul)
+heatmap(heatmap_data2, scale="column")
+```
+
+## Clustering
+```{r}
+clustering_columns <- c("total_pitches",
+                        "ba", 
+                        "iso",
+                        "babip",
+                        "slg",
+                        "xba",
+                        "launch_speed", 
+                        "launch_angle",
+                        "bat_speed",
+                        "swing_length",
+                        "k_percent",
+                        "batter_run_value_per_100", 
+                        "swing_miss_percent")
+```
+
+```{r}
+# Checking if players are assigned to more than one team
+team <- rep(NA, nrow(savant_data))
+
+for(i in 1:nrow(savant_data)){
+  temp <- unique(batters$batter_team[which(batters$player_name == savant_data$player_name[i])])
+  if(length(temp) > 1){
+    print(temp)
+    team[i] <- temp[1]
+  } else {
+    team[i] <- temp
+  }
+}
+```
+
+```{r, warning = FALSE}
+# Extract just columns for clustering
+savant_data <- filter(savant_data, abs >= 28)
+clus_data <- savant_data[,clustering_columns]
+# Set row names on data set
+rownames(clus_data) <- paste(savant_data$player_name)
+
+sdata <- scale(clus_data)
+
+# Calculate distances between points
+dist_mat <- dist(sdata, # Set data set
+                 method = "euclidean") # Set distance measure to use
+
+hc <- hclust(dist_mat, # Set distance matrix to use 
+              method = "ward.D2" )
+
+# Create dendrogram
+dend <- as.dendrogram(hc)
+# order it the closest we can to the order of the observations:
+dend <- rotate(dend, 1:nrow(sdata))
+
+# Color the branches based on the clusters:
+dend <- color_branches(dend, k=8) 
+
+# We hang the dendrogram a bit:
+dend <- hang.dendrogram(dend,hang_height=0.1)
+# reduce the size of the labels:
+dend <- set(dend, "labels_cex", 0.55)
+# And plot:
+par(mar = c(3,3,3,7))
+plot(dend, 
+     main = "Clustered MLB Batters",
+     horiz =  TRUE,  nodePar = list(cex = .007))
+```
+
+```{r}
+set.seed(12345) # Set seed for reproducibility
+fit <- kmeans(x = sdata, # Set data as explanatory variables 
+                centers = 10,  # Set number of clusters
+                nstart = 25, # Set number of starts
+                iter.max = 100 ) # Set maximum number of iterations to use
+
+# Extract clusters
+clusters <- fit$cluster
+# Extract centers
+centers <- fit$centers
+
+# Create cluster vector
+cluster <- c(1:10)
+# Join cluster vector and centers
+center_df <- data.frame(cluster, centers)
+
+# Reshape the data
+center_reshape <- gather(center_df, features, values, total_pitches:swing_miss_percent)
+```
+
+
+```{r, message = FALSE}
+# Create plot
+g_heat_1 <- ggplot(data = center_reshape, # Set dataset
+                   aes(x = features, y = cluster, fill = values)) + # Set aesthetics
+  scale_y_continuous(breaks = seq(1, 10, by = 1)) + # Set y axis breaks
+  geom_tile() + # Geom tile for heatmap
+  coord_equal() +  # Make scale the same for both axis
+  theme_set(theme_bw(base_size = 22) ) + # Set theme
+  scale_fill_gradient2(low = "blue", # Choose low color
+                       mid = "white", # Choose mid color
+                       high = "red", # Choose high color
+                       midpoint =0, # Choose mid point
+                       space = "Lab", 
+                       na.value ="grey", # Choose NA value
+                       guide = "colourbar", # Set color bar
+                       aesthetics = "fill") + # Select aesthetics to apply
+  coord_flip() # Rotate plot to view names clearly
+# Generate plot
+g_heat_1
+```
+
+```{r}
+# Check the number of hitters in each cluster
+summary(as.factor(clusters))
+```
+
+```{r}
+#Cluster 1
+savant_data$player_name[which(clusters == 1)]
+#Cluster 2
+savant_data$player_name[which(clusters == 2)]
+#Cluster 3
+savant_data$player_name[which(clusters == 3)]
+#Cluster 4
+savant_data$player_name[which(clusters == 4)]
+#Cluster 5
+savant_data$player_name[which(clusters == 5)]
+#Cluster 6
+savant_data$player_name[which(clusters == 6)]
+#Cluster 7
+savant_data$player_name[which(clusters == 7)]
+#Cluster 8
+savant_data$player_name[which(clusters == 8)]
+#Cluster 9
+savant_data$player_name[which(clusters == 9)]
+#Cluster 10
+savant_data$player_name[which(clusters == 10)]
+```
+
+## Spray Chart Function
+```{r}
+geom_spray <- function(...) {
+  ggplot(...) +
+    geom_curve(x = 33, xend = 223, y = -100, yend = -100, curvature = -.65) +
+    geom_segment(x = 128, xend = 33, y = -208, yend = -100) +
+    geom_segment(x = 128, xend = 223, y = -208, yend = -100) +
+    geom_curve(x = 83, xend = 173, y = -155, yend = -156, curvature = -.65) +
+    coord_fixed() +
+    scale_x_continuous(NULL, limits = c(25, 225)) +
+    scale_y_continuous(NULL, limits = c(-225, -25))
+}
+```
+
+## Player Spray Charts
+```{r, warning = FALSE}
+#Vaughn
+vaughn_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Andrew Vaughn 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Benintendi
+benintendi_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Andrew Benintendi 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Sheets
+sheets_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Gavin Sheets 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Lee
+lee_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Korey Lee 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Robert
+robert_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Luis Robert Jr. 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#DeLoach
+deloach_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Zach DeLoach 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Vargas
+vargas_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Miguel Vargas 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Sosa
+sosa_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Lenyn Sosa 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Baldwin
+baldwin_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Brooks Baldwin 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Fletcher
+fletcher_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Dominic Fletcher 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Julks
+julks_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Corey Julks 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Amaya
+amaya_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Jacob Amaya 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Robinson
+robinson_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Chuckie Robinson 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Shewmake
+shewmake_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Braden Shewmake 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Ramos
+ramos_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Bryan Ramos 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+
+#Colas
+colas_hits %>% 
+  geom_spray(aes(x = hc_x, y = -hc_y)) +
+  geom_point(aes(color = events), alpha = .5) +
+  labs(title = "Oscar Colás 2024 Spray Chart",
+       color = "Hit Type") +
+  scale_color_manual(values = c("single" = "blue","double" = "red", "home_run" = "darkgreen", "triple" = "violet")) +
+  theme_void()
+```
+
+## Strike Zone Heat Maps
+```{r}
+#Data
+vaughn_strikes <- vaughn_swings %>% filter(description == "swinging_strike")
+vaughn_sliders <- vaughn_swings %>% filter(pitch_name == "Slider")
+vaughn_fastballs <- vaughn_swings %>% filter(pitch_name == "4-Seam Fastball")
+
+lee_strikes <- lee_swings %>% filter(description == "swinging_strike")
+lee_fastballs <- lee_swings %>% filter(pitch_name == "4-Seam Fastball")
+
+vargas_strikes <- vargas_swings %>% filter(description == "swinging_strike")
+vargas_fastballs <- vargas_swings %>% filter(pitch_name == "4-Seam Fastball")
+
+robert_strikes <- robert_swings %>% filter(description == "swinging_strike")
+robert_fastballs <- robert_swings %>% filter(pitch_name == "4-Seam Fastball")
+robert_sliders <- robert_swings %>% filter(pitch_name == "Slider")
+
+```
+
+### Andrew Vaughn
+```{r, warning = FALSE}
+# Heat Map
+vaughn_filter <- vaughn %>% 
+  filter(description %in% c("swinging_strike", "called_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot))
+
+vaughn_filter %>% 
+  filter(description %in% c("swinging_strike", "called_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Strikes and Hits", subtitle = "Andrew Vaughn 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("swinging_strike" = "cornflowerblue","called_strike" = "darkred", "hit_into_play" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+
+# Strikes by pitch
+pitch_counts <- c()
+for (pitch in unique(vaughn_strikes$pitch_name)) {
+  pitch_counts[pitch] <- sum(vaughn_strikes$pitch_name == pitch)
+}
+print(pitch_counts)
+
+#Sliders
+vaughn_sliders %>% 
+  filter(description %in% c("swinging_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Sliders Swung At", subtitle = "Andrew Vaughn 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("swinging_strike" = "darkred", "hit_into_play" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+
+#Fastballs
+vaughn_fastballs %>% 
+  filter(description %in% c("swinging_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Fastballs Swung At", subtitle = "Andrew Vaughn 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("swinging_strike" = "darkred", "hit_into_play" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+```
+
+### Korey Lee
+```{r, warning = FALSE}
+# Strikes by pitch
+pitch_counts <- c()
+for (pitch in unique(lee_strikes$pitch_name)) {
+  pitch_counts[pitch] <- sum(lee_strikes$pitch_name == pitch)
+}
+print(pitch_counts)
+
+#Fastballs
+lee_fastballs %>% 
+  filter(description %in% c("swinging_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Fastballs Swung At", subtitle = "Korey Lee 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("swinging_strike" = "darkred", "hit_into_play" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+```
+
+### Miguel Vargas
+```{r, warning = FALSE}
+#Strikes by pitch
+pitch_counts <- c()
+for (pitch in unique(vargas_strikes$pitch_name)) {
+  pitch_counts[pitch] <- sum(vargas_strikes$pitch_name == pitch)
+}
+print(pitch_counts)
+
+#Fastballs
+vargas_fastballs %>% 
+  filter(description %in% c("swinging_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Fastballs Swung At", subtitle = "Miguel Vargas 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("swinging_strike" = "darkred", "hit_into_play" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+```
+
+### Dominic Fletcher
+```{r, warning = FALSE}
+fletcher_hits %>% 
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = events), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Hits", subtitle = "Dominic Fletcher 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("single" = "blue", "double" = "darkred", "home_run" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+```
+
+### Andrew Benintendi
+```{r, warning = FALSE}
+benintendi_swings2 <- benintendi_swings %>% filter(description == "hit_into_play" | description == "swinging_strike" )
+benintendi_swings2 %>% 
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description, size = bat_speed), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Bat Speed and Swing Result", subtitle = "Andrew Benintendi 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("hit_into_play" = "darkgreen", "swinging_strike" = "pink")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+```
+
+### Luis Robert Jr.
+```{r, warning = FALSE}
+#Strikes by pitch
+pitch_counts <- c()
+for (pitch in unique(robert_strikes$pitch_name)) {
+  pitch_counts[pitch] <- sum(robert_strikes$pitch_name == pitch)
+}
+print(pitch_counts)
+
+#Sliders
+robert_sliders %>% 
+  filter(description %in% c("swinging_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Sliders Swung At", subtitle = "Luis Robert Jr. 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("swinging_strike" = "darkred", "hit_into_play" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+
+#Fastballs
+robert_fastballs %>% 
+  filter(description %in% c("swinging_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = description), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Fastballs Swung At", subtitle = "Luis Robert Jr. 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("swinging_strike" = "darkred", "hit_into_play" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+```
+
+### Lenyn Sosa
+```{r, warning = FALSE}
+sosa_hits %>% 
+  #filter(description %in% c("swinging_strike", "hit_into_play"), !is.na(sz_top), !is.na(sz_bot)) %>%
+  ggplot() +
+  geom_point(aes(x = plate_x, y = plate_z, color = events, size = hit_distance_sc), alpha = 0.5) +
+  geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "gray60", linewidth = 1) +
+  labs(title = "Hit Distance", subtitle = "Lenyn Sosa 2024 Season",
+       x = "Horizontal Position", y = "Vertical Position") +
+  scale_color_manual(values = c("single" = "blue", "double" = "darkred", "home_run" = "darkgreen")) +
+  coord_fixed(ratio = 1) + 
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
+
+sox_savant_data %>% select(player_name, hardhit_percent, barrels_per_bbe_percent, barrels_per_pa_percent)
+```
+
+# Contour Plots
+```{r}
+geom_zone <- function(top = 3.75, bottom = 1.5, linecolor = "gray60"){
+  geom_rect(xmin = -.7083, xmax = .7083, ymin = bottom, ymax = top,
+            alpha = 0, color = linecolor, linewidth = 1.5)
+}
+```
+
+```{r}
+#Vaughn
+vaughn_swing_strike <- filter(vaughn, description == "swinging_strike")
+vaughn_swing_strike %>% 
+  ggplot(aes(x = plate_x, y = plate_z)) +
+  geom_density_2d_filled(alpha = 0.5, contour_var = "count") +
+  geom_point() +
+    geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "turquoise4", linewidth = 1) +
+  labs(title = "Contour Plot Andrew Vaughn Swing and Misses",
+       x = "Horizontal Position", y = "Vertical Position") +
+  coord_fixed() +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) 
+
+#Lee
+lee_swing_strike <- filter(lee, description == "swinging_strike")
+lee_swing_strike %>% 
+  ggplot(aes(x = plate_x, y = plate_z)) +
+  geom_density_2d_filled(alpha = 0.5, contour_var = "count") +
+  geom_point() +
+    geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "turquoise4", linewidth = 1) +
+  labs(title = "Contour Plot Korey Lee Swing and Misses",
+       x = "Horizontal Position", y = "Vertical Position") +
+  coord_fixed() +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) 
+
+#Vargas
+vargas_swing_strike <- filter(vargas, description == "swinging_strike")
+vargas_swing_strike %>% 
+  ggplot(aes(x = plate_x, y = plate_z)) +
+  geom_density_2d_filled(alpha = 0.5, contour_var = "count") +
+  geom_point() +
+    geom_rect(aes(xmin = -.7083, xmax = .7083, ymin = median(sz_bot), ymax = median(sz_top)),
+            alpha = 0, color = "turquoise4", linewidth = 1) +
+  labs(title = "Contour Plot Miguel Vargas Swing and Misses",
+       x = "Horizontal Position", y = "Vertical Position") +
+  coord_fixed() +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) 
+```
+
